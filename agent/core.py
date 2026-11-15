@@ -75,7 +75,7 @@ def execute_tool(name: str, arguments: str) -> str:
         })
 
 
-def run_agent(query: str) -> str:
+def run_agent(query: str, on_event=None) -> str:
     """Run a multi-step AI research process and save its final report."""
 
     if not query.strip():
@@ -83,12 +83,12 @@ def run_agent(query: str) -> str:
 
     token = start_research()
     try:
-        return _run_agent(query)
+        return _run_agent(query, on_event)
     finally:
         finish_research(token)
 
 
-def _run_agent(query: str) -> str:
+def _run_agent(query: str, on_event=None) -> str:
     client = Groq(api_key=os.environ["GROQ_API_KEY"])
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -97,7 +97,11 @@ def _run_agent(query: str) -> str:
     total_tool_calls = 0
 
     for step in range(MAX_STEPS):
-        print(f"\n--- Step {step + 1} ---")
+        step_message = f"--- Step {step + 1} ---"
+        print(f"\n{step_message}")
+        if on_event:
+            on_event(step_message)
+
         response = client.chat.completions.create(
             model=MODEL,
             messages=messages,
@@ -109,10 +113,12 @@ def _run_agent(query: str) -> str:
         tool_calls = message.tool_calls or []
 
         if not tool_calls:
-            return _save_final_report(message.content or "No answer generated.")
+            return _save_final_report(message.content or "No answer generated.", on_event)
 
         remaining = MAX_TOOL_CALLS - total_tool_calls
         if len(tool_calls) > remaining:
+            if on_event:
+                on_event("Tool call limit reached. Preparing the final report.")
             break
 
         messages.append({
@@ -134,9 +140,22 @@ def _run_agent(query: str) -> str:
         for call in tool_calls:
             name = call.function.name
             arguments = call.function.arguments
+            display_arguments = arguments if name != "save_report" else '{"report":"..."}'
             print(f"Calling tool: {name}")
-            print(f"Arguments: {arguments}")
+            print(f"Arguments: {display_arguments}")
+            if on_event:
+                on_event(f"Calling tool: {name} {display_arguments}")
+
             result = execute_tool(name, arguments)
+            tool_result = json.loads(result)
+            if on_event:
+                if isinstance(tool_result, dict) and "error" in tool_result:
+                    on_event(f"{name} error: {tool_result['error']}")
+                elif name in ("search_web", "get_research_sources"):
+                    on_event(f"{name} returned {len(tool_result)} sources")
+                elif name == "read_webpage":
+                    on_event(f"read_webpage returned: {tool_result.get('title') or tool_result.get('url')}")
+
             messages.append({
                 "role": "tool",
                 "tool_call_id": call.id,
@@ -145,10 +164,14 @@ def _run_agent(query: str) -> str:
             total_tool_calls += 1
 
             if name == "save_report":
-                saved = json.loads(result)
-                if "path" in saved:
-                    print(f"Saved report: {saved['path']}")
+                if "path" in tool_result:
+                    print(f"Saved report: {tool_result['path']}")
+                    if on_event:
+                        on_event("Saved report: reports/")
                     return json.loads(arguments)["report"]
+
+    if on_event:
+        on_event("Preparing the final report.")
 
     final_messages = messages + [
         {
@@ -168,12 +191,14 @@ def _run_agent(query: str) -> str:
         temperature=0.2,
         max_completion_tokens=1000,
     )
-    return _save_final_report(response.choices[0].message.content or "No report generated.")
+    return _save_final_report(response.choices[0].message.content or "No report generated.", on_event)
 
 
-def _save_final_report(report: str) -> str:
+def _save_final_report(report: str, on_event=None) -> str:
     if report in ("No answer generated.", "No report generated."):
         return report
     saved = save_report(report)
     print(f"Saved report: {saved['path']}")
+    if on_event:
+        on_event("Saved report: reports/")
     return report

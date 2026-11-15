@@ -78,12 +78,31 @@ class ToolTests(unittest.TestCase):
             "search_web": lambda **kwargs: [{"title": "Source", "url": "https://example.com", "content": "Evidence"}],
             "read_webpage": lambda **kwargs: {"title": "Page", "url": "https://example.com", "content": "More evidence"},
         }):
-            report = core.run_agent("topic")
+            events = []
+            report = core.run_agent("topic", on_event=events.append)
             files = list(Path(folder).glob("*.md"))
             self.assertEqual(report, "# Report\nSource: https://example.com")
             self.assertEqual(len(files), 1)
             self.assertEqual(files[0].read_text(), report + "\n")
+            self.assertTrue(any("Calling tool: search_web" in event for event in events))
+            self.assertTrue(any("Calling tool: save_report" in event for event in events))
+            self.assertTrue(any("Saved report:" in event for event in events))
         self.assertEqual(get_research_sources(), [])
+
+    def test_gradio_streams_tool_calls(self):
+        import app
+
+        def fake_agent(query, on_event):
+            on_event("--- Step 1 ---")
+            on_event('Calling tool: search_web {"query":"topic"}')
+            return "# Final report"
+
+        with patch.dict(app.os.environ, {"GROQ_API_KEY": "test", "TAVILY_API_KEY": "test"}), patch.object(app, "run_agent", side_effect=fake_agent):
+            updates = list(app.research("topic"))
+
+        self.assertGreaterEqual(len(updates), 3)
+        self.assertIn("Calling tool: search_web", updates[1][0])
+        self.assertEqual(updates[-1][1], "# Final report")
 
     def test_agent_saves_report_when_model_skips_save_tool(self):
         fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: FakeResponse(content="Final report"))))
