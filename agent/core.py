@@ -75,7 +75,7 @@ def execute_tool(name: str, arguments: str) -> str:
         })
 
 
-def run_agent(query: str, on_event=None) -> str:
+def run_agent(query: str, on_event=None, groq_api_key=None) -> str:
     """Run a multi-step AI research process and save its final report."""
 
     if not query.strip():
@@ -83,13 +83,17 @@ def run_agent(query: str, on_event=None) -> str:
 
     token = start_research()
     try:
-        return _run_agent(query, on_event)
+        return _run_agent(query, on_event, groq_api_key)
     finally:
         finish_research(token)
 
 
-def _run_agent(query: str, on_event=None) -> str:
-    client = Groq(api_key=os.environ["GROQ_API_KEY"])
+def _run_agent(query: str, on_event=None, groq_api_key=None) -> str:
+    api_key = groq_api_key or os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY is missing")
+
+    client = Groq(api_key=api_key)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": query},

@@ -32,7 +32,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Put your own Groq and Tavily API keys in `.env`. The file is ignored by Git. Then start either interface:
+Put your Tavily API key in `.env`. For Groq, either set `GROQ_API_KEY` in `.env` or enter the key in the password field in the browser. The field applies only to that research run. `.env` is ignored by Git. Then start either interface:
 
 ```bash
 python app.py   # Browser UI at http://127.0.0.1:7860
@@ -49,7 +49,7 @@ The tests use fake API responses. They do not spend Groq or Tavily credits.
 
 ## Deploy on Hugging Face Spaces
 
-Create a Gradio Space and upload the project files. `README.md` contains the Space configuration, and `app.py` is the entry point. Add `GROQ_API_KEY` and `TAVILY_API_KEY` in the Space settings as **Secrets**. Do not upload `.env`, `.venv`, or generated reports.
+Create a Gradio Space and upload the project files. `README.md` contains the Space configuration, and `app.py` is the entry point. Add `TAVILY_API_KEY` in the Space settings as a **Secret**. Add `GROQ_API_KEY` there too if you want to provide a server key; otherwise visitors can enter their own key in the UI. Do not upload `.env`, `.venv`, or generated reports.
 
 A public Space using your keys can consume your API quotas. Review the quotas before sharing its URL.
 

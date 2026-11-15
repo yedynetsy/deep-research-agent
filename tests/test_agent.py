@@ -90,17 +90,28 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(get_research_sources(), [])
 
     def test_gradio_streams_tool_calls(self):
-        def fake_agent(query, on_event):
+        received_keys = []
+
+        def fake_agent(query, on_event, groq_api_key):
+            received_keys.append(groq_api_key)
             on_event("--- Step 1 ---")
             on_event('Calling tool: search_web {"query":"topic"}')
             return "# Final report"
 
-        with patch.dict(app.os.environ, {"GROQ_API_KEY": "test", "TAVILY_API_KEY": "test"}), patch.object(app, "run_agent", side_effect=fake_agent):
-            updates = list(app.research("topic"))
+        with patch.dict(app.os.environ, {"GROQ_API_KEY": "", "TAVILY_API_KEY": "test"}), patch.object(app, "run_agent", side_effect=fake_agent):
+            updates = list(app.research("topic", "user-key"))
 
         self.assertGreaterEqual(len(updates), 3)
         self.assertIn("Calling tool: search_web", updates[1][0])
         self.assertEqual(updates[-1][1], "# Final report")
+        self.assertEqual(received_keys, ["user-key"])
+        self.assertNotIn("user-key", updates[-1][0])
+
+    def test_groq_key_is_used_for_one_run(self):
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: FakeResponse(content="Final report"))))
+        with tempfile.TemporaryDirectory() as folder, patch.dict(core.os.environ, {"GROQ_API_KEY": ""}), patch.object(core, "Groq", return_value=fake_client) as groq_client, patch("tools.report.REPORTS_DIR", Path(folder)):
+            self.assertEqual(core.run_agent("topic", groq_api_key="user-key"), "Final report")
+            groq_client.assert_called_once_with(api_key="user-key")
 
     def test_agent_saves_report_when_model_skips_save_tool(self):
         fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: FakeResponse(content="Final report"))))

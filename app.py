@@ -10,22 +10,30 @@ from groq import APIStatusError, RateLimitError
 from agent.core import run_agent
 
 
-def research(query: str):
+def research(query: str, groq_api_key: str = ""):
     """Show tool calls as they happen, followed by the final report."""
 
     if not query.strip():
         yield "", "Please enter a research question."
         return
 
-    if not os.getenv("GROQ_API_KEY") or not os.getenv("TAVILY_API_KEY"):
-        yield "", "The Groq and Tavily API keys must be configured before starting research."
+    if not (groq_api_key.strip() or os.getenv("GROQ_API_KEY")):
+        yield "", "Enter a Groq API key or configure GROQ_API_KEY on the server."
+        return
+
+    if not os.getenv("TAVILY_API_KEY"):
+        yield "", "TAVILY_API_KEY must be configured on the server."
         return
 
     events = Queue()
 
     def run():
         try:
-            report = run_agent(query, on_event=lambda message: events.put(("log", message)))
+            report = run_agent(
+                query,
+                on_event=lambda message: events.put(("log", message)),
+                groq_api_key=groq_api_key.strip() or None,
+            )
             events.put(("report", report))
 
         except RateLimitError:
@@ -57,11 +65,17 @@ def research(query: str):
 
 app = gr.Interface(
     fn=research,
-    inputs=gr.Textbox(
-        label="Research question",
-        placeholder="What are the main methods for reducing hallucinations in RAG systems?",
-        lines=3,
-    ),
+    inputs=[
+        gr.Textbox(
+            label="Research question",
+            placeholder="What are the main methods for reducing hallucinations in RAG systems?",
+            lines=3,
+        ),
+        gr.Textbox(
+            label="Groq API key (optional if configured on the server)",
+            type="password",
+        ),
+    ],
     outputs=[
         gr.Textbox(label="Agent activity", lines=12, interactive=False),
         gr.Markdown(label="Research report"),
@@ -73,8 +87,10 @@ app = gr.Interface(
     ),
     flagging_mode="never",
     analytics_enabled=False,
+    api_visibility="private",
+    deep_link=False,
 )
 
 
 if __name__ == "__main__":
-    app.launch()
+    app.launch(run_history=False)
