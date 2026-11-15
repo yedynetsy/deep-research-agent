@@ -1,0 +1,19 @@
+# Local API keys and environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# Python and test output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Generated reports
+reports/
+
+# Editor and system files
+.vscode/
+.DS_Store
