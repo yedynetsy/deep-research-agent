@@ -177,21 +177,38 @@ def _run_agent(query: str, on_event=None, groq_api_key=None) -> str:
     if on_event:
         on_event("Preparing the final report.")
 
-    final_messages = messages + [
+    evidence = []
+    for item in messages:
+        if item["role"] != "tool":
+            continue
+
+        result = json.loads(item["content"])
+        if isinstance(result, dict) and "error" in result:
+            continue
+
+        evidence.append(item["content"][:2200])
+
+    final_messages = [
+        {
+            "role": "system",
+            "content": (
+                "Write a concise research report using only the evidence provided. "
+                "Include source URLs. Do not invent facts or citations. "
+                "State clearly when something cannot be verified. "
+                "No tools are available for this final answer."
+            ),
+        },
         {
             "role": "user",
             "content": (
-                "Finish the research now using only the evidence "
-                "already collected. Produce a concise structured "
-                "report with source URLs. Do not invent sources. "
-                "Clearly state any limitations."
+                f"Research question: {query}\n\n"
+                "Collected evidence:\n" + "\n\n".join(evidence[-8:])
             ),
-        }
+        },
     ]
     response = client.chat.completions.create(
         model=MODEL,
         messages=final_messages,
-        tool_choice="none",
         temperature=0.2,
         max_completion_tokens=1000,
     )

@@ -107,6 +107,28 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(received_keys, ["user-key"])
         self.assertNotIn("user-key", updates[-1][0])
 
+    def test_final_report_uses_compact_evidence_without_tool_choice(self):
+        requests = []
+        responses = iter([
+            FakeResponse(calls=[call("search_web", {"query": "topic"}, 1)]),
+            FakeResponse(content="Final report with https://example.com"),
+        ])
+
+        def create(**kwargs):
+            requests.append(kwargs)
+            return next(responses)
+
+        fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+        with tempfile.TemporaryDirectory() as folder, patch.dict(core.os.environ, {"GROQ_API_KEY": "test"}), patch.object(core, "Groq", return_value=fake_client), patch.object(core, "MAX_STEPS", 1), patch("tools.report.REPORTS_DIR", Path(folder)), patch.dict(core.AVAILABLE_TOOLS, {
+            "search_web": lambda **kwargs: [{"title": "Source", "url": "https://example.com", "content": "Evidence"}],
+        }):
+            report = core.run_agent("topic")
+
+        self.assertIn("https://example.com", report)
+        self.assertEqual([message["role"] for message in requests[-1]["messages"]], ["system", "user"])
+        self.assertIn("https://example.com", requests[-1]["messages"][1]["content"])
+        self.assertNotIn("tool_choice", requests[-1])
+
     def test_groq_key_is_used_for_one_run(self):
         fake_client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: FakeResponse(content="Final report"))))
         with tempfile.TemporaryDirectory() as folder, patch.dict(core.os.environ, {"GROQ_API_KEY": ""}), patch.object(core, "Groq", return_value=fake_client) as groq_client, patch("tools.report.REPORTS_DIR", Path(folder)):
