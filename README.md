@@ -61,7 +61,12 @@ A public Space using your keys can consume your API quotas. Review the quotas be
 - `agent/tools.py` — tool schemas and function registry.
 - `tools/` — web search, webpage reader, source list, and report saving.
 - `tests/` — local tests with fake API responses.
+- `reports/` — generated reports, kept locally and ignored by Git.
 
 ## Limitations
 
 The model can make mistakes when summarizing sources. Check important claims and URLs in its report before relying on them. Webpage text is limited to keep model requests within API limits. Reports are stored locally under `reports/`; this directory is intentionally not committed to Git.
+
+## Submission
+
+The README covers the project task, tools, and launch instructions. Add the public URL of your running Space and the GitHub repository URL when you submit the homework. If the work was done by two people, describe each person's contribution in the submission.

@@ -5,11 +5,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import app
 from agent import core
 from agent.tools import AVAILABLE_TOOLS, TOOL_SCHEMAS
 from tools import reader, search
 from tools.research import finish_research, get_research_sources, start_research
-from tools.report import save_report
 
 
 class FakeResponse:
@@ -90,8 +90,6 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(get_research_sources(), [])
 
     def test_gradio_streams_tool_calls(self):
-        import app
-
         def fake_agent(query, on_event):
             on_event("--- Step 1 ---")
             on_event('Calling tool: search_web {"query":"topic"}')

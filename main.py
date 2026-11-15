@@ -14,6 +14,9 @@ def main():
         print("\nResearch Report\n")
         print(report)
 
+    except ValueError as error:
+        print(f"\n{error}")
+
     except RateLimitError:
         print("\nGroq rate limit exceeded. Try again after the limit resets.")
 
