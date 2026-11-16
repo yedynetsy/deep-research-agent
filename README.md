@@ -8,8 +8,6 @@ app_file: app.py
 
 # Deep Research Agent
 
-GitHub repository: https://github.com/yedynetsy/deep-research-agent
-
 A Python research agent that searches the web, reads useful pages, and writes a Markdown report with source URLs. The language model decides which tool to call next. The Gradio page shows tool calls while the agent works and then displays its report; the terminal interface is also available.
 
 ## Tools
