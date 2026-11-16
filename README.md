@@ -8,6 +8,8 @@ app_file: app.py
 
 # Deep Research Agent
 
+GitHub repository: https://github.com/yedynetsy/deep-research-agent
+
 A Python research agent that searches the web, reads useful pages, and writes a Markdown report with source URLs. The language model decides which tool to call next. The Gradio page shows tool calls while the agent works and then displays its report; the terminal interface is also available.
 
 ## Tools
@@ -69,4 +71,4 @@ The model can make mistakes when summarizing sources. Check important claims and
 
 ## Submission
 
-The README covers the project task, tools, and launch instructions. Add the public URL of your running Space and the GitHub repository URL when you submit the homework. If the work was done by two people, describe each person's contribution in the submission.
+The README covers the project task, tools, and launch instructions. Include this GitHub repository URL and the public URL of your running Space when you submit the homework. If the work was done by two people, describe each person's contribution in the submission.

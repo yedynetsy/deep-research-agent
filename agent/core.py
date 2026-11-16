@@ -101,7 +101,7 @@ def _run_agent(query: str, on_event=None, groq_api_key=None) -> str:
     total_tool_calls = 0
 
     for step in range(MAX_STEPS):
-        step_message = f"--- Step {step + 1} ---"
+        step_message = f"Step {step + 1}"
         print(f"\n{step_message}")
         if on_event:
             on_event(step_message)
